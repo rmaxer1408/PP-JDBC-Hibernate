@@ -81,7 +81,6 @@ public class UserDaoJDBCImpl implements UserDao {
         } catch (SQLException e) {
             System.err.println("Error getting user list");
         }
-        System.out.println(users);
         return users;
     }
 
