@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class UserDaoJDBCImpl implements UserDao {
-    private final Connection conn = Util.getConnection();
+    Connection conn = Util.getConnection();
     private static final String CREATE = """
             CREATE TABLE user (
                 id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -25,8 +25,8 @@ public class UserDaoJDBCImpl implements UserDao {
     }
 
     public void createUsersTable() {
-        try (Statement stmt = conn.createStatement()) {
-            stmt.execute(CREATE);
+        try (Statement statement = conn.createStatement()) {
+            statement.execute(CREATE);
             System.out.println("Table User was created");
         } catch (SQLException e) {
             System.err.println("Table User wasn't created");
@@ -34,8 +34,8 @@ public class UserDaoJDBCImpl implements UserDao {
     }
 
     public void dropUsersTable() {
-        try (Statement stmt = conn.createStatement()) {
-            stmt.execute(DROP);
+        try (Statement statement = conn.createStatement()) {
+            statement.execute(DROP);
             System.out.println("Table User was deleted");
         } catch (SQLException e) {
             System.err.println("Table User wasn't deleted");
@@ -44,12 +44,19 @@ public class UserDaoJDBCImpl implements UserDao {
 
     public void saveUser(String name, String lastName, byte age) {
         try (PreparedStatement preparedStatement = conn.prepareStatement(INSERT)) {
-            preparedStatement.setString(1, name);
-            preparedStatement.setString(2, lastName);
-            preparedStatement.setByte(3, age);
-            preparedStatement.executeUpdate();
-            System.out.printf("User with name – %s added in db", name);
-            System.out.println();
+            conn.setAutoCommit(false);
+            try {
+                preparedStatement.setString(1, name);
+                preparedStatement.setString(2, lastName);
+                preparedStatement.setByte(3, age);
+                preparedStatement.executeUpdate();
+                conn.commit();
+                System.out.printf("User with name – %s added in db", name);
+                System.out.println();
+            } catch (SQLException e) {
+                conn.rollback();
+            }
+            conn.setAutoCommit(true);
         } catch (SQLException e) {
             System.err.println("User wasn't saved");
         }
@@ -57,9 +64,16 @@ public class UserDaoJDBCImpl implements UserDao {
 
     public void removeUserById(long id) {
         try (PreparedStatement preparedStatement = conn.prepareStatement(DELETE)) {
-            preparedStatement.setLong(1, id);
-            preparedStatement.executeUpdate();
-            System.out.println("User was removed");
+            conn.setAutoCommit(false);
+            try {
+                preparedStatement.setLong(1, id);
+                preparedStatement.executeUpdate();
+                conn.commit();
+                System.out.println("User was removed");
+            } catch (SQLException e) {
+                conn.rollback();
+            }
+            conn.setAutoCommit(true);
         } catch (SQLException e) {
             System.err.println("User wasn't removed");
         }
@@ -67,17 +81,24 @@ public class UserDaoJDBCImpl implements UserDao {
 
     public List<User> getAllUsers() {
         List<User> users = new ArrayList<>();
-
-        try (ResultSet resultSet = conn.createStatement().executeQuery(SELECT)) {
-            while (resultSet.next()) {
-                Long id = resultSet.getLong("id");
-                String name = resultSet.getString("name");
-                String lastname = resultSet.getString("lastname");
-                Byte age = resultSet.getByte("age");
-                User user = new User(name, lastname, age);
-                user.setId(id);
-                users.add(user);
+        try (Statement statement = conn.createStatement()) {
+            conn.setAutoCommit(false);
+            try {
+                ResultSet resultSet = statement.executeQuery(SELECT);
+                while (resultSet.next()) {
+                    Long id = resultSet.getLong("id");
+                    String name = resultSet.getString("name");
+                    String lastname = resultSet.getString("lastname");
+                    Byte age = resultSet.getByte("age");
+                    User user = new User(name, lastname, age);
+                    user.setId(id);
+                    users.add(user);
+                }
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
             }
+            conn.setAutoCommit(true);
         } catch (SQLException e) {
             System.err.println("Error getting user list");
         }
@@ -86,8 +107,15 @@ public class UserDaoJDBCImpl implements UserDao {
 
     public void cleanUsersTable() {
         try (Statement statement = conn.createStatement()) {
-            statement.executeUpdate(TRUNCATE);
-            System.out.println("Table was cleaned");
+            conn.setAutoCommit(false);
+            try {
+                statement.executeUpdate(TRUNCATE);
+                conn.commit();
+                System.out.println("Table was cleaned");
+            } catch (SQLException e) {
+                conn.rollback();
+            }
+            conn.setAutoCommit(true);
         } catch (SQLException e) {
             System.err.println("Table wasn't cleaned");
         }
