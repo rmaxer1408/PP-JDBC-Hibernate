@@ -19,7 +19,6 @@ public class UserDaoHibernateImpl implements UserDao {
                 age TINYINT NOT NULL
             );""";
     private static final String DROP = "DROP TABLE IF EXISTS user";
-    public static final String TRUNCATE = "TRUNCATE TABLE user";
     public UserDaoHibernateImpl() {
 
     }
@@ -97,7 +96,7 @@ public class UserDaoHibernateImpl implements UserDao {
         Transaction transaction = null;
         try (Session session = sessionFactory.getCurrentSession()) {
             transaction = session.beginTransaction();
-            session.createNativeQuery(TRUNCATE).executeUpdate();
+            session.createQuery("delete from User").executeUpdate();
             transaction.commit();
             System.out.println("Table was cleaned");
         } catch (HibernateException e) {
